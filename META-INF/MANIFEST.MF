@@ -10,11 +10,10 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.jdt.core;bundle-version="3.13.100"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ActivationPolicy: lazy
-Import-Package: com.github.javaparser,
- org.apache.commons.lang3;version="3.1.0"
 Bundle-ClassPath: lib/javaparser-core-3.2.4.jar,
  bin/,
- .
+ .,
+ lib/commons-lang3-3.18.0.jar
 Export-Package: com.github.javaparser;
   uses:="com.github.javaparser.ast.type,
    com.github.javaparser.ast.comments,

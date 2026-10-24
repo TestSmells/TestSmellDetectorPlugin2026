@@ -140,8 +140,8 @@ public class TSmellHandler extends AbstractHandler {
 					TestFile testFile;
 
 					for (Entry<IResource, IResource> fullPaths : paths.entrySet()) {
-						String prodFilePath = fullPaths.getKey().getRawLocation().toString();
-						String testFilePath = fullPaths.getValue().getRawLocation().toString();
+						String prodFilePath = fullPaths.getKey().getRawLocation().toOSString();
+						String testFilePath = fullPaths.getValue().getRawLocation().toOSString();
 						testFile = new TestFile(project.getName(), testFilePath, prodFilePath);
 						testFiles.add(testFile);
 					}

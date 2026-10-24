@@ -256,7 +256,7 @@ public class TSmellHandler extends AbstractHandler {
 	 * @throws JavaModelException
 	 */
 	private ArrayList<IResource> getTestFilePaths(ICompilationUnit unit) throws JavaModelException {
-		ASTParser parser = ASTParser.newParser(AST.JLS9);
+		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
 		parser.setKind(ASTParser.K_COMPILATION_UNIT);
 		parser.setSource(unit);
 		final CompilationUnit cu = (CompilationUnit) parser.createAST(null);

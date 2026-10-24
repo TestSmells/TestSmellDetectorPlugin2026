@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="testsmell.feature"
+      label="TestSmellDetector"
+      version="1.0.0.qualifier"
+      provider-name="SeniorDesign2026">
+
+   <description url="http://www.example.com/description">
+      Detects test smells in Java unit tests from inside Eclipse. Select a Java project and run the detector to see bad practices in your test code — assertion roulette, magic numbers, sleepy tests, eager tests, and others — reported in a dedicated results view.
+   </description>
+
+   <copyright url="http://www.example.com/copyright">
+      Copyright 2018 TestSmells. Portions copyright 2026 University
+of Michigan–Dearborn.
+   </copyright>
+
+   <license url="http://www.example.com/license">
+      Licensed under the Apache License, Version 2.0 (the “License”); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+   </license>
+
+   <plugin
+         id="main.java.testsmell.plugin"
+         version="0.0.0"/>
+
+</feature>

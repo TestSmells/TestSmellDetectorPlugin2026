@@ -23,7 +23,7 @@ The purpose of this project is twofold:
 
 1. In Eclipse, go to **Help → Install New Software…**
 2. Click **Add…**
-3. Give it a name (e.g. `tsDetect`), paste this url, https://testsmells.github.io/TestSmellDetectorPlugin2026/content.jar, in **Location** and click **Add**
+3. Give it a name (e.g. `tsDetect`), paste this url, https://testsmells.github.io/TestSmellDetectorPlugin2026, in **Location** and click **Add**
 4. **Uncheck "Group items by category"**
 5. Select **Test Smell Detector**, click **Next**, accept the license, click **Finish**
 6. Accept the unsigned-content warning

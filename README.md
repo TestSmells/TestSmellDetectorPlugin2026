@@ -17,7 +17,54 @@ The purpose of this project is twofold:
 
 
 
-## Tool Usage
+## Eclipse Plugin
+
+### Installation
+
+1. In Eclipse, go to **Help → Install New Software…**
+2. Click **Add…**, then **Local…**, and select the update site directory
+3. Give it a name (e.g. `tsDetect`) and click **Add**
+4. **Uncheck "Group items by category"**
+5. Select **Test Smell Detector**, click **Next**, accept the license, click **Finish**
+6. Accept the unsigned-content warning
+7. Restart Eclipse when prompted
+
+### Usage
+
+1. Open or create a Java project containing unit tests
+2. Select the **project** in Package Explorer
+3. Click the Test Smell Detector button in the toolbar, or press **Ctrl+6** (**Cmd+6** on macOS)
+4. Results open in the **Test Smell Detector** view
+
+### File naming
+
+The plugin pairs each test file with its production file by name. A test file
+named `testExample.java` is matched to `Example.java`. Test files that do not
+follow this convention will not be paired with a production file, and smells
+requiring production code will not be reported for them.
+
+### Requirements
+
+- Eclipse <FILL IN THE VERSION YOU VERIFIED AGAINST>
+- Java <FILL IN YOUR JDK VERSION> or later
+
+### Building from source
+
+1. Clone the repository
+2. In Eclipse: **File → Import → General → Existing Projects into Workspace**
+   (not "Existing Maven Projects")
+3. Verify **Plug-in Dependencies** appears under
+   **Properties → Java Build Path → Libraries**
+4. **Run → Run Configurations… → Eclipse Application → New → Run**
+
+
+
+## Standalone Command-Line Tool
+
+The sections below describe the original command-line tool. The Eclipse plugin
+does not require a CSV file — see the Eclipse Plugin section above.
+
+
 
 #### Input
 

@@ -3,7 +3,7 @@
 **Date:** 2026-10-25
 **Eclipse version:** 2026-09 (Eclipse IDE for RCP and RAP Developers)
 **Java runtime:** JustJ OpenJDK HotSpot JRE 25.0.4 (bundled with Eclipse)
-**Machine:** _(fill in: CPU / RAM)_
+**Machine:** Intel Core i5-8265U @ 1.60 GHz (4 cores / 8 threads), 8 GB DDR4-2400
 **Plugin build:** master, post markers and preferences
 
 ## Method
@@ -55,6 +55,10 @@ Extrapolating on that marginal rate:
 | 2,000 | ~6.2 s |
 
 These are projections, not measurements, and assume linear scaling continues.
+
+The test machine is a low-power mobile processor from 2018 with 8 GB of memory.
+The figures above should therefore be read as a conservative baseline: a
+developer on more capable hardware can be expected to see shorter times.
 
 ## UI responsiveness
 

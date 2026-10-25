@@ -9,14 +9,20 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.*;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.ide.IDE;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.Path;
 
 import main.java.testsmell.plugin.handlers.TSmellDetection;
 import main.java.testsmell.plugin.handlers.TSmellDetectionCollection;
 
 /**
  * Table viewer class that launches a table viewer with a grid that displays the
- * results for the test smells. 
- * Displays all the production and test file paths and smells detected for each.
+ * results for the test smells. Displays all the production and test file paths
+ * and smells detected for each.
  */
 public class TSmellTableViewer {
 
@@ -119,8 +125,8 @@ public class TSmellTableViewer {
 	}
 
 	/**
-	 * Creates the table with a grid of columns.
-	 * Displays all the detection results into the columns.
+	 * Creates the table with a grid of columns. Displays all the detection results
+	 * into the columns.
 	 * 
 	 * @param parent
 	 */
@@ -151,7 +157,7 @@ public class TSmellTableViewer {
 		column = new TableColumn(table, SWT.LEFT, 2);
 		column.setText("Test File Path");
 		column.setWidth(500);
-		
+
 		column = new TableColumn(table, SWT.LEFT, 3);
 		column.setText("Method Names");
 		column.setWidth(500);
@@ -163,12 +169,13 @@ public class TSmellTableViewer {
 					String[] tempSmellNames = detection.getSmellNames();
 					String[] tempProdFilePaths = (String[]) detection.getProdFilePath();
 					String[] tempTestFilePaths = (String[]) detection.getTestFilePath();
+					String[] tempMethodNames = detection.getMethodNames();
 					if (!tempProdFilePaths.equals(null))
 						if (!tempTestFilePaths.equals(null))
 							for (int i = 0; i < tempSmellNames.length; i++) {
 								TableItem item = new TableItem(table, SWT.NONE);
-								item.setText(
-										new String[] { tempSmellNames[i], tempProdFilePaths[i], tempTestFilePaths[i] });
+								item.setText(new String[] { tempSmellNames[i], tempProdFilePaths[i],
+										tempTestFilePaths[i], tempMethodNames[i] });
 							}
 				} catch (NullPointerException e) {
 					Shell activeShell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
@@ -186,12 +193,38 @@ public class TSmellTableViewer {
 					} else {
 						errorStr += "Test File: " + detection.getTestFilePath() + " \n\n";
 					}
-				
+
 					TSmellDialog dialog = new TSmellDialog(activeShell, "Failed to load files", errorStr);
 					dialog.open();
 				}
 				detection = collectionObj.getNextDetection();
 			}
+		}
+
+		table.addMouseListener(new MouseAdapter() {
+			public void mouseDoubleClick(MouseEvent e) {
+				TableItem[] selection = table.getSelection();
+				if (selection.length == 0) {
+					return;
+				}
+				openFileInEditor(selection[0].getText(2));
+			}
+		});
+	}
+
+	/**
+	 * Opens the file at the given absolute path in an editor.
+	 */
+	private void openFileInEditor(String absolutePath) {
+		IFile file = ResourcesPlugin.getWorkspace().getRoot().getFileForLocation(new Path(absolutePath));
+		if (file == null || !file.exists()) {
+			return;
+		}
+		try {
+			IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+			IDE.openEditor(page, file);
+		} catch (PartInitException ex) {
+			ex.printStackTrace();
 		}
 	}
 
@@ -214,7 +247,7 @@ public class TSmellTableViewer {
 		if (shell != null && !shell.isDisposed())
 			shell.dispose();
 	}
-	
+
 	/**
 	 * Releases resources.
 	 */
@@ -246,9 +279,10 @@ public class TSmellTableViewer {
 	public Control getControl() {
 		return table.getParent();
 	}
-	
+
 	/**
 	 * Get an instance of the test smell table.
+	 * 
 	 * @return
 	 */
 	public static Table getTSmellTable() {

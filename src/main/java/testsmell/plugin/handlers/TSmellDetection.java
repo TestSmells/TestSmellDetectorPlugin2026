@@ -8,6 +8,7 @@ import java.util.List;
 import main.java.testsmell.AbstractSmell;
 import main.java.testsmell.TestFile;
 import main.java.testsmell.TestSmellDetector;
+import main.java.testsmell.SmellyElement;
 
 /**
  * Detection class to encapsulate test smell detection objects.
@@ -101,5 +102,25 @@ public class TSmellDetection {
 			tempSmellNames[i] = smells.get(i).getSmellName();
 		}
 		return tempSmellNames;
+	}
+
+	/**
+	 * Gets the names of the methods (or classes) carrying each smell.
+	 * Padded to match the size of the smells array so table columns stay aligned.
+	 *
+	 * @return comma-separated element names, one entry per detected smell
+	 */
+	public String[] getMethodNames() {
+		String[] tempMethodNames = new String[smells.size()];
+		for (int i = 0; i < smells.size(); i++) {
+			List<String> names = new ArrayList<String>();
+			for (SmellyElement element : smells.get(i).getSmellyElements()) {
+				if (element.getHasSmell()) {
+					names.add(element.getElementName());
+				}
+			}
+			tempMethodNames[i] = String.join(", ", names);
+		}
+		return tempMethodNames;
 	}
 }

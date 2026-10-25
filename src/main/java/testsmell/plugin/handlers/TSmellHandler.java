@@ -57,6 +57,9 @@ public class TSmellHandler extends AbstractHandler {
 	 */
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
+		testPaths.clear();
+		paths.clear();
+		testFiles.clear();
 		Shell activeShell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
 
 		try {
@@ -77,9 +80,9 @@ public class TSmellHandler extends AbstractHandler {
 				detect.detectSmells();
 				detect = collectionObj.getNextDetection();
 			}
-			if(page.findView("TestSmellDetector.view") != null) {
+			if (page.findView("TestSmellDetector.view") != null) {
 				IViewPart viewPart = page.findView("TestSmellDetector.view");
-				TSmellView tSmellView = (TSmellView)viewPart;
+				TSmellView tSmellView = (TSmellView) viewPart;
 				page.hideView(tSmellView);
 			}
 			collectionObj.resetNextIndexVal();
@@ -115,8 +118,8 @@ public class TSmellHandler extends AbstractHandler {
 	}
 
 	/**
-	 * Creates test files that can be analyzed for detection smells using 
-	 * both production and test file paths.
+	 * Creates test files that can be analyzed for detection smells using both
+	 * production and test file paths.
 	 * 
 	 * @param project
 	 * @throws CoreException

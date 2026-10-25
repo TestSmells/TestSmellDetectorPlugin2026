@@ -70,4 +70,12 @@
          </view>
       </perspectiveExtension>
    </extension>
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="main.java.testsmell.plugin.preferences.TSmellPreferencePage"
+            id="TestSmellDetector.preferences"
+            name="Test Smell Detector">
+      </page>
+   </extension>
 </plugin>

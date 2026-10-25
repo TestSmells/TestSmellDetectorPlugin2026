@@ -8,6 +8,7 @@ import java.util.List;
 import main.java.testsmell.AbstractSmell;
 import main.java.testsmell.TestFile;
 import main.java.testsmell.TestSmellDetector;
+import main.java.testsmell.plugin.Activator;
 import main.java.testsmell.SmellyElement;
 
 /**
@@ -38,7 +39,7 @@ public class TSmellDetection {
 			paths = new SimpleEntry<String, String>(testFile.getProductionFilePath(),testFile.getTestFilePath());
 			for (AbstractSmell smell : tempFile.getTestSmells()) {
 				try {
-					if (smell.getHasSmell()) {
+					if (smell.getHasSmell() && isSmellEnabled(smell.getSmellName())) {
 						smells.add(smell);
 					}
 				} catch (NullPointerException e) {
@@ -122,5 +123,20 @@ public class TSmellDetection {
 			tempMethodNames[i] = String.join(", ", names);
 		}
 		return tempMethodNames;
+	}
+
+	/**
+	 * Whether the given smell is enabled in the plugin preferences.
+	 * Defaults to true if preferences are unavailable.
+	 *
+	 * @param smellName the smell's display name
+	 * @return true if the smell should be reported
+	 */
+	private boolean isSmellEnabled(String smellName) {
+		Activator activator = Activator.getDefault();
+		if (activator == null) {
+			return true;
+		}
+		return activator.getPreferenceStore().getBoolean(Activator.smellKey(smellName));
 	}
 }

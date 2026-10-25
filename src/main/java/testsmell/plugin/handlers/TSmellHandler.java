@@ -37,7 +37,6 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.HandlerUtil;
 
 import main.java.testsmell.TestFile;
-import main.java.testsmell.plugin.markers.TSmellMarkerManager;
 import main.java.testsmell.plugin.views.TSmellDialog;
 import main.java.testsmell.plugin.views.TSmellView;
 
@@ -58,6 +57,7 @@ public class TSmellHandler extends AbstractHandler {
 	 */
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
+		long startTime = System.currentTimeMillis();
 		testPaths.clear();
 		paths.clear();
 		testFiles.clear();
@@ -75,12 +75,11 @@ public class TSmellHandler extends AbstractHandler {
 		IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
 		try {
 			TSmellDetectionCollection collectionObj = TSmellDetectionCollection.getInstance();
+			int analyzedCount = testFiles.size();
 			collectionObj.addNewDetections(testFiles);
-			TSmellMarkerManager.clearMarkers(project);
 			TSmellDetection detect = collectionObj.getNextDetection();
 			while (detect != null) {
 				detect.detectSmells();
-				TSmellMarkerManager.createMarkers(detect);
 				detect = collectionObj.getNextDetection();
 			}
 			if (page.findView("TestSmellDetector.view") != null) {
@@ -88,6 +87,9 @@ public class TSmellHandler extends AbstractHandler {
 				TSmellView tSmellView = (TSmellView) viewPart;
 				page.hideView(tSmellView);
 			}
+			long elapsed = System.currentTimeMillis() - startTime;
+			System.out.println("[tsDetect] Analyzed " + analyzedCount + " test file(s) in " + elapsed + " ms");
+
 			collectionObj.resetNextIndexVal();
 			page.showView("TestSmellDetector.view");
 			testFiles.clear();

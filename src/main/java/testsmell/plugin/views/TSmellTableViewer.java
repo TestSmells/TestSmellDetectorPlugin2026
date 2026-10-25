@@ -15,6 +15,14 @@ import org.eclipse.ui.ide.IDE;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.texteditor.ITextEditor;
+import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IMethod;
+import org.eclipse.jdt.core.ISourceRange;
+import org.eclipse.jdt.core.IType;
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.JavaModelException;
 
 import main.java.testsmell.plugin.handlers.TSmellDetection;
 import main.java.testsmell.plugin.handlers.TSmellDetectionCollection;
@@ -207,23 +215,60 @@ public class TSmellTableViewer {
 				if (selection.length == 0) {
 					return;
 				}
-				openFileInEditor(selection[0].getText(2));
+				openFileInEditor(selection[0].getText(2), selection[0].getText(3));
 			}
 		});
 	}
 
 	/**
-	 * Opens the file at the given absolute path in an editor.
+	 * Opens the file at the given absolute path and reveals the named element.
 	 */
-	private void openFileInEditor(String absolutePath) {
+	private void openFileInEditor(String absolutePath, String methodNames) {
 		IFile file = ResourcesPlugin.getWorkspace().getRoot().getFileForLocation(new Path(absolutePath));
 		if (file == null || !file.exists()) {
 			return;
 		}
 		try {
 			IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-			IDE.openEditor(page, file);
+			IEditorPart editor = IDE.openEditor(page, file);
+			revealElement(editor, file, methodNames);
 		} catch (PartInitException ex) {
+			ex.printStackTrace();
+		}
+	}
+
+	/**
+	 * Selects the named method in the editor. Some smells report a class name
+	 * rather than a method name, so classes are matched as a fallback.
+	 */
+	private void revealElement(IEditorPart editor, IFile file, String methodNames) {
+		if (methodNames == null || methodNames.trim().isEmpty()) {
+			return;
+		}
+		if (!(editor instanceof ITextEditor)) {
+			return;
+		}
+		String firstName = methodNames.split(",")[0].trim();
+		try {
+			ICompilationUnit unit = JavaCore.createCompilationUnitFrom(file);
+			if (unit == null) {
+				return;
+			}
+			for (IType type : unit.getAllTypes()) {
+				for (IMethod method : type.getMethods()) {
+					if (method.getElementName().equals(firstName)) {
+						ISourceRange range = method.getNameRange();
+						((ITextEditor) editor).selectAndReveal(range.getOffset(), range.getLength());
+						return;
+					}
+				}
+				if (type.getElementName().equals(firstName)) {
+					ISourceRange range = type.getNameRange();
+					((ITextEditor) editor).selectAndReveal(range.getOffset(), range.getLength());
+					return;
+				}
+			}
+		} catch (JavaModelException ex) {
 			ex.printStackTrace();
 		}
 	}

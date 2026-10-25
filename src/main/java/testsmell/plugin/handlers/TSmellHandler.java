@@ -37,6 +37,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.HandlerUtil;
 
 import main.java.testsmell.TestFile;
+import main.java.testsmell.plugin.markers.TSmellMarkerManager;
 import main.java.testsmell.plugin.views.TSmellDialog;
 import main.java.testsmell.plugin.views.TSmellView;
 
@@ -75,9 +76,11 @@ public class TSmellHandler extends AbstractHandler {
 		try {
 			TSmellDetectionCollection collectionObj = TSmellDetectionCollection.getInstance();
 			collectionObj.addNewDetections(testFiles);
+			TSmellMarkerManager.clearMarkers(project);
 			TSmellDetection detect = collectionObj.getNextDetection();
 			while (detect != null) {
 				detect.detectSmells();
+				TSmellMarkerManager.createMarkers(detect);
 				detect = collectionObj.getNextDetection();
 			}
 			if (page.findView("TestSmellDetector.view") != null) {

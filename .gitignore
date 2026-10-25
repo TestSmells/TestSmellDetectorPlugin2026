@@ -9,4 +9,4 @@ tmp/
 local.properties
 .settings/
 .loadpath
-.recommenders
+.recommendersOutput_TestSmellDetection_*.csv

@@ -19,45 +19,137 @@ The purpose of this project is twofold:
 
 ## Eclipse Plugin
 
+Detects test smells in Java unit tests from inside the Eclipse workbench.
+Results appear in a dedicated view, as warning markers in the editor, and in
+the Problems view.
+
+### Requirements
+
+- **Eclipse** 2026-09 or later (verified against Eclipse IDE for RCP and RAP Developers, 2026-09)
+- **Java** 25 or later
+- A Java project in the workspace containing unit tests
+
 ### Installation
+
+From the update site:
 
 1. In Eclipse, go to **Help → Install New Software…**
 2. Click **Add…**
-3. Give it a name (e.g. `tsDetect`), paste this url, https://testsmells.github.io/TestSmellDetectorPlugin2026, in **Location** and click **Add**
-4. **Uncheck "Group items by category"**
+3. Enter a name (for example `tsDetect`) and this location:
+   `https://testsmells.github.io/TestSmellDetectorPlugin2026/`
+   then click **Add**
+4. Uncheck **Group items by category**
 5. Select **Test Smell Detector**, click **Next**, accept the license, click **Finish**
 6. Accept the unsigned-content warning
 7. Restart Eclipse when prompted
 
+To update later, use **Help → Check for Updates**.
+
 ### Usage
 
-1. Open or create a Java project containing unit tests
-2. Select the **project** in Package Explorer
-3. Click the Test Smell Detector button in the toolbar, or press **Ctrl+6** (**Cmd+6** on macOS)
-4. Results open in the **Test Smell Detector** view
+Run an analysis in any of three ways:
 
-### File naming
+- Click the **Test Smell Detector** button in the toolbar
+- Press **Ctrl+6** (**Cmd+6** on macOS)
+- Right-click a project in Package Explorer and choose **Run Test Smell Analysis**
 
-The plugin pairs each test file with its production file by name. A test file
-named `testExample.java` is matched to `Example.java`. Test files that do not
-follow this convention will not be paired with a production file, and smells
-requiring production code will not be reported for them.
+A project must be selected, not an individual file.
 
-### Requirements
+Results are reported in three places:
 
-- Eclipse <FILL IN THE VERSION YOU VERIFIED AGAINST>
-- Java <FILL IN YOUR JDK VERSION> or later
+- **Test Smell Detector view** — a table listing each smell, the files involved,
+  and the method carrying it. Double-click a row to open that file and jump to
+  the method.
+- **Editor markers** — a warning marker on the line of each affected method.
+  Hovering a marker shows the smell name, an explanation, and a suggested fix.
+- **Problems view** — the same findings as standard Eclipse problems, with
+  description, resource, and line number.
 
-### Building from source
+Markers are cleared and rebuilt on each run, so results never go stale.
 
-1. Clone the repository
-2. In Eclipse: **File → Import → General → Existing Projects into Workspace**
-   (not "Existing Maven Projects")
-3. Verify **Plug-in Dependencies** appears under
-   **Properties → Java Build Path → Libraries**
-4. **Run → Run Configurations… → Eclipse Application → New → Run**
+### Preferences
 
+**Window → Preferences → Test Smell Detector** lists every smell the tool knows
+about, each with a checkbox. Unchecking one stops it being reported. Settings
+persist across restarts.
 
+All analyzers still execute on every run; disabling a smell filters it out of
+the results. The detection engine provides no way to skip an analyzer, and
+engine code is out of scope for this plugin.
+
+### File naming convention
+
+The plugin pairs a test file with its production file by removing the first four
+characters of the test filename. A file named `testExample.java` is matched to
+`Example.java`.
+
+The widely used `ExampleTest.java` convention is **not** supported — it produces
+no match, and the run reports a file-pairing error. This is inherited behaviour
+from the detection engine. See Known limitations.
+
+### Known limitations
+
+**Test file naming.** Only the `testExample.java` → `Example.java` convention is
+supported (see above). Projects using `ExampleTest.java` cannot be analyzed.
+
+**Analysis runs on the UI thread.** The workbench does not repaint while
+detection runs. This is imperceptible at typical project sizes — roughly 750 ms
+for 200 test files — but would be noticeable on a very large codebase. See
+`documentation/performance.md`.
+
+**Detection is on demand.** The plugin does not analyze automatically when a
+file is saved. Analysis must be triggered explicitly.
+
+**Unsaved changes are not analyzed.** The engine reads files from disk, so edits
+must be saved before running.
+
+**Windows path assumptions in the engine.** Several engine methods split file
+paths on backslashes only and assume a minimum path depth. Behaviour on macOS
+and Linux is untested and likely degraded.
+
+**Two engine analyzers are impaired.** `Dependent Test` cannot report under any
+input, and `Resource Optimism` only detects the inline `new File(...)` form, not
+the assigned-variable case. Both are defects in engine code, which project
+constraints prohibit modifying. Root causes are documented in
+`documentation/regression-baseline.md`.
+
+### Developer setup
+
+1. Clone the repository.
+2. In Eclipse: **File → Import → General → Existing Projects into Workspace**,
+   and select the cloned folder. Do **not** use "Existing Maven Projects" —
+   m2e will take over the build path and remove the Plug-in Dependencies
+   container.
+3. Both `TestSmellDetector` and `TestSmellDetectorFeature` should import.
+4. Confirm **Plug-in Dependencies** appears under
+   **Properties → Java Build Path → Libraries**.
+5. Confirm the JRE System Library matches the declared execution environment
+   (`JavaSE-25`).
+6. Launch a runtime workbench: **Run → Run Configurations… → Eclipse Application
+   → New → Run**.
+
+The `pom.xml` in the repository root is vestigial. The plugin is built with
+classic PDE tooling, not Maven or Tycho.
+
+### Building the update site
+
+1. Right-click `TestSmellDetectorFeature` → **Export → Plug-in Development →
+   Deployable features**
+2. Destination: a directory
+3. On the **Options** tab, tick **Generate p2 repository**
+4. Copy the generated contents into `docs/`, preserving the `.nojekyll` file,
+   and push. GitHub Pages serves `docs/` as the update site.
+
+Increment `Bundle-Version` in `META-INF/MANIFEST.MF` and the feature version in
+`TestSmellDetectorFeature/feature.xml` before republishing, or p2 will not
+recognise the build as an update.
+
+### Verifying detection
+
+`fixtures/` holds a regression corpus of two test/production pairs covering 20
+of the 21 detectors. `documentation/regression-baseline.md` records the expected
+output and how to reproduce it by running the engine directly through
+`main.java.Main`.
 
 ## Standalone Command-Line Tool
 

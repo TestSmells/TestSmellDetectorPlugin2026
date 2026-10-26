@@ -12,7 +12,13 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.resources.WorkspaceJob;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.SubMonitor;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -29,9 +35,11 @@ import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.HandlerUtil;
@@ -39,7 +47,6 @@ import org.eclipse.ui.handlers.HandlerUtil;
 import main.java.testsmell.TestFile;
 import main.java.testsmell.plugin.markers.TSmellMarkerManager;
 import main.java.testsmell.plugin.views.TSmellDialog;
-import main.java.testsmell.plugin.views.TSmellView;
 
 /**
  * A handler class for the the test smell plugin.
@@ -51,6 +58,9 @@ public class TSmellHandler extends AbstractHandler {
 	private HashMap<IResource, IResource> paths = new HashMap<>();
 	private IProject project;
 	private List<TestFile> testFiles = new ArrayList<TestFile>();
+
+	/** Identifies this plugin's detection jobs so a new run can cancel an older one. */
+	private static final Object JOB_FAMILY = new Object();
 
 	/**
 	 * Launches the Test Smell Detector view when a project is selected and the
@@ -73,40 +83,91 @@ public class TSmellHandler extends AbstractHandler {
 			return null;
 		}
 
-		IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-		try {
-			int analyzedCount = testFiles.size();
-
-			// Build this run's results in a local list. Nothing shared is
-			// mutated while detection is in progress.
-			List<TSmellDetection> detections = new ArrayList<TSmellDetection>();
-			for (TestFile testFile : testFiles) {
-				detections.add(new TSmellDetection(testFile));
-			}
-
-			TSmellMarkerManager.clearMarkers(project);
-			for (TSmellDetection detection : detections) {
-				detection.detectSmells();
-				TSmellMarkerManager.createMarkers(detection);
-			}
-
-			// Publish the completed run in a single assignment.
-			TSmellResults.publish(detections);
-
-			long elapsed = System.currentTimeMillis() - startTime;
-			System.out.println("[tsDetect] Analyzed " + analyzedCount + " test file(s) in " + elapsed + " ms");
-
-			if (page.findView("TestSmellDetector.view") != null) {
-				IViewPart viewPart = page.findView("TestSmellDetector.view");
-				TSmellView tSmellView = (TSmellView) viewPart;
-				page.hideView(tSmellView);
-			}
-			page.showView("TestSmellDetector.view");
-			testFiles.clear();
-		} catch (PartInitException e) {
-			e.printStackTrace();
+		// Everything below runs off the UI thread. The work is prepared here,
+		// on the UI thread, because the selection and the Java model must be
+		// read from it.
+		final IProject analyzedProject = project;
+		final List<TSmellDetection> detections = new ArrayList<TSmellDetection>();
+		for (TestFile testFile : testFiles) {
+			detections.add(new TSmellDetection(testFile));
 		}
+		final int analyzedCount = detections.size();
+		final long started = startTime;
+
+		// A new run supersedes one still in progress rather than queueing behind it.
+		Job.getJobManager().cancel(JOB_FAMILY);
+
+		WorkspaceJob job = new WorkspaceJob("Detecting test smells") {
+
+			@Override
+			public boolean belongsTo(Object family) {
+				return JOB_FAMILY.equals(family);
+			}
+
+			@Override
+			public IStatus runInWorkspace(IProgressMonitor monitor) throws CoreException {
+				SubMonitor progress = SubMonitor.convert(monitor, "Detecting test smells", detections.size() + 1);
+
+				TSmellMarkerManager.clearMarkers(analyzedProject);
+				progress.worked(1);
+
+				for (TSmellDetection detection : detections) {
+					if (progress.isCanceled()) {
+						return Status.CANCEL_STATUS;
+					}
+					detection.detectSmells();
+					TSmellMarkerManager.createMarkers(detection);
+					progress.worked(1);
+				}
+
+				long elapsed = System.currentTimeMillis() - started;
+				System.out.println("[tsDetect] Analyzed " + analyzedCount + " test file(s) in " + elapsed + " ms");
+
+				publishAndShow(detections);
+				return Status.OK_STATUS;
+			}
+		};
+		job.setUser(true);
+		job.setRule(analyzedProject);
+		job.schedule();
+
 		return null;
+	}
+
+	/**
+	 * Publishes a completed run's results and opens the results view.
+	 *
+	 * Both happen together on the UI thread so the view never reads results
+	 * that have not been published yet.
+	 *
+	 * @param detections the completed run's detections
+	 */
+	private static void publishAndShow(final List<TSmellDetection> detections) {
+		Display.getDefault().asyncExec(new Runnable() {
+
+			@Override
+			public void run() {
+				TSmellResults.publish(detections);
+
+				IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+				if (window == null) {
+					return;
+				}
+				IWorkbenchPage page = window.getActivePage();
+				if (page == null) {
+					return;
+				}
+				try {
+					IViewPart viewPart = page.findView("TestSmellDetector.view");
+					if (viewPart != null) {
+						page.hideView(viewPart);
+					}
+					page.showView("TestSmellDetector.view");
+				} catch (PartInitException e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 
 	/**

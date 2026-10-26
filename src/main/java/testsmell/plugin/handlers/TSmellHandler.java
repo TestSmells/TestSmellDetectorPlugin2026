@@ -37,6 +37,8 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IEditorInput;
+import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -63,6 +65,14 @@ public class TSmellHandler extends AbstractHandler {
 	private static final Object JOB_FAMILY = new Object();
 
 	/**
+	 * The project analyzed by the most recent successful run. Opening the results
+	 * view moves focus away from the Package Explorer, so a second run started
+	 * from the toolbar has no project in its selection. Remembering the last
+	 * project lets repeated runs work without reselecting the project first.
+	 */
+	private static IProject lastAnalyzedProject;
+
+	/**
 	 * Launches the Test Smell Detector view when a project is selected and the
 	 * plugin icon is activated.
 	 */
@@ -76,12 +86,20 @@ public class TSmellHandler extends AbstractHandler {
 
 		try {
 			project = getCurrentProject(event);
+			if (project == null) {
+				MessageDialog.openInformation(activeShell, "Test Smell Detector",
+						"Select a project in the Package Explorer, then run the detector again.");
+				return null;
+			}
 			createTestFiles(project);
-		} catch (CoreException | NullPointerException ex) {
+		} catch (CoreException | RuntimeException ex) {
 			ex.printStackTrace();
-			MessageDialog.openError(activeShell, "Test Smell Detector", "Please select a project");
+			MessageDialog.openError(activeShell, "Test Smell Detector",
+					"Could not read the selected project.\n\n" + ex.getClass().getSimpleName() + ": " + ex.getMessage());
 			return null;
 		}
+
+		lastAnalyzedProject = project;
 
 		// Everything below runs off the UI thread. The work is prepared here,
 		// on the UI thread, because the selection and the Java model must be
@@ -177,19 +195,76 @@ public class TSmellHandler extends AbstractHandler {
 	 * @return
 	 */
 	private IProject getCurrentProject(ExecutionEvent e) {
-		ISelection sel = HandlerUtil.getCurrentSelection(e);
-
-		if (sel instanceof IStructuredSelection) {
-			Object selected = ((IStructuredSelection) sel).getFirstElement();
-
-			IResource resource = (IResource) Platform.getAdapterManager().getAdapter(selected, IResource.class);
-
-			if (resource != null) {
-				IProject project = resource.getProject();
-				return project;
-			}
+		IProject fromSelection = projectFromSelection(HandlerUtil.getCurrentSelection(e));
+		if (fromSelection != null) {
+			return fromSelection;
 		}
+
+		IProject fromEditor = projectFromActiveEditor();
+		if (fromEditor != null) {
+			return fromEditor;
+		}
+
+		// Nothing is selected and no file is open. Fall back to the project
+		// analyzed last, provided it still exists and is open.
+		if (lastAnalyzedProject != null && lastAnalyzedProject.exists() && lastAnalyzedProject.isAccessible()) {
+			return lastAnalyzedProject;
+		}
+
 		return null;
+	}
+
+	/**
+	 * Resolves the enclosing project of the current workbench selection, or null
+	 * if the selection is empty or is not backed by a workspace resource.
+	 */
+	private IProject projectFromSelection(ISelection sel) {
+		if (!(sel instanceof IStructuredSelection)) {
+			return null;
+		}
+
+		Object selected = ((IStructuredSelection) sel).getFirstElement();
+		if (selected == null) {
+			// An empty selection yields a null element. Passing it to the
+			// adapter manager raises AssertionFailedException, so stop here.
+			return null;
+		}
+
+		if (selected instanceof IResource) {
+			return ((IResource) selected).getProject();
+		}
+
+		IResource resource = Platform.getAdapterManager().getAdapter(selected, IResource.class);
+		return resource == null ? null : resource.getProject();
+	}
+
+	/**
+	 * Resolves the enclosing project of the file open in the active editor, or
+	 * null if no editor is open on a workspace file.
+	 */
+	private IProject projectFromActiveEditor() {
+		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+		if (window == null) {
+			return null;
+		}
+
+		IWorkbenchPage page = window.getActivePage();
+		if (page == null) {
+			return null;
+		}
+
+		IEditorPart editor = page.getActiveEditor();
+		if (editor == null) {
+			return null;
+		}
+
+		IEditorInput input = editor.getEditorInput();
+		if (input == null) {
+			return null;
+		}
+
+		IFile file = input.getAdapter(IFile.class);
+		return file == null ? null : file.getProject();
 	}
 
 	/**

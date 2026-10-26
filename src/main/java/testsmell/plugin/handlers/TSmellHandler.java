@@ -37,6 +37,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.HandlerUtil;
 
 import main.java.testsmell.TestFile;
+import main.java.testsmell.plugin.markers.TSmellMarkerManager;
 import main.java.testsmell.plugin.views.TSmellDialog;
 import main.java.testsmell.plugin.views.TSmellView;
 
@@ -74,26 +75,34 @@ public class TSmellHandler extends AbstractHandler {
 
 		IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
 		try {
-			TSmellDetectionCollection collectionObj = TSmellDetectionCollection.getInstance();
 			int analyzedCount = testFiles.size();
-			collectionObj.addNewDetections(testFiles);
-			TSmellDetection detect = collectionObj.getNextDetection();
-			while (detect != null) {
-				detect.detectSmells();
-				detect = collectionObj.getNextDetection();
+
+			// Build this run's results in a local list. Nothing shared is
+			// mutated while detection is in progress.
+			List<TSmellDetection> detections = new ArrayList<TSmellDetection>();
+			for (TestFile testFile : testFiles) {
+				detections.add(new TSmellDetection(testFile));
 			}
+
+			TSmellMarkerManager.clearMarkers(project);
+			for (TSmellDetection detection : detections) {
+				detection.detectSmells();
+				TSmellMarkerManager.createMarkers(detection);
+			}
+
+			// Publish the completed run in a single assignment.
+			TSmellResults.publish(detections);
+
+			long elapsed = System.currentTimeMillis() - startTime;
+			System.out.println("[tsDetect] Analyzed " + analyzedCount + " test file(s) in " + elapsed + " ms");
+
 			if (page.findView("TestSmellDetector.view") != null) {
 				IViewPart viewPart = page.findView("TestSmellDetector.view");
 				TSmellView tSmellView = (TSmellView) viewPart;
 				page.hideView(tSmellView);
 			}
-			long elapsed = System.currentTimeMillis() - startTime;
-			System.out.println("[tsDetect] Analyzed " + analyzedCount + " test file(s) in " + elapsed + " ms");
-
-			collectionObj.resetNextIndexVal();
 			page.showView("TestSmellDetector.view");
 			testFiles.clear();
-			collectionObj.clearTSmellsCollection();
 		} catch (PartInitException e) {
 			e.printStackTrace();
 		}

@@ -2,6 +2,7 @@ package main.java.testsmell.plugin.views;
 
 import java.io.FileNotFoundException;
 import java.util.Arrays;
+import java.util.List;
 import org.eclipse.jface.viewers.*;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.*;
@@ -25,7 +26,7 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 
 import main.java.testsmell.plugin.handlers.TSmellDetection;
-import main.java.testsmell.plugin.handlers.TSmellDetectionCollection;
+import main.java.testsmell.plugin.handlers.TSmellResults;
 
 /**
  * Table viewer class that launches a table viewer with a grid that displays the
@@ -140,7 +141,7 @@ public class TSmellTableViewer {
 	 */
 	private void createTable(Composite parent) throws FileNotFoundException {
 
-		TSmellDetectionCollection collectionObj = TSmellDetectionCollection.getExistingInstance();
+		List<TSmellDetection> detections = TSmellResults.get();
 
 		int style = SWT.SINGLE | SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL | SWT.FULL_SELECTION | SWT.HIDE_SELECTION;
 
@@ -170,9 +171,8 @@ public class TSmellTableViewer {
 		column.setText("Method Names");
 		column.setWidth(500);
 
-		if (collectionObj != null) {
-			TSmellDetection detection = collectionObj.getNextDetection();
-			while (detection != null) {
+		if (detections != null) {
+			for (TSmellDetection detection : detections) {
 				try {
 					String[] tempSmellNames = detection.getSmellNames();
 					String[] tempProdFilePaths = (String[]) detection.getProdFilePath();
@@ -205,7 +205,6 @@ public class TSmellTableViewer {
 					TSmellDialog dialog = new TSmellDialog(activeShell, "Failed to load files", errorStr);
 					dialog.open();
 				}
-				detection = collectionObj.getNextDetection();
 			}
 		}
 

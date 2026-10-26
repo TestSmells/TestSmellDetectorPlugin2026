@@ -45,6 +45,32 @@ From the update site:
 
 To update later, use **Help → Check for Updates**.
 
+### Manual installation
+
+If the update site is unreachable — on an offline machine, for example —
+install from a local copy instead.
+
+**From a local directory or archive:**
+
+1. Obtain the update site: either clone this repository (it is published from
+   `docs/`) or export one yourself (see Building the update site).
+2. In Eclipse, go to **Help → Install New Software… → Add…**
+3. Click **Local…** and choose the directory, or **Archive…** and choose the
+   zip file, then click **Add**.
+4. Continue from step 4 of the update site instructions above.
+
+**Via the dropins folder:**
+
+1. Export the plugin as a JAR: right-click the plugin project →
+   **Export → Plug-in Development → Deployable plug-ins and fragments**.
+2. Copy the resulting JAR into the `dropins` folder of your Eclipse
+   installation.
+3. Restart Eclipse.
+
+The dropins route bypasses p2 entirely, so Eclipse will not track the plugin
+for updates and will not warn you about unmet dependencies. Prefer the update
+site where possible.
+
 ### Usage
 
 Run an analysis in any of three ways:

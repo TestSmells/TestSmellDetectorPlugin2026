@@ -171,41 +171,49 @@ public class TSmellTableViewer {
 		column.setText("Method Names");
 		column.setWidth(500);
 
-		if (detections != null) {
-			for (TSmellDetection detection : detections) {
-				try {
-					String[] tempSmellNames = detection.getSmellNames();
-					String[] tempProdFilePaths = (String[]) detection.getProdFilePath();
-					String[] tempTestFilePaths = (String[]) detection.getTestFilePath();
-					String[] tempMethodNames = detection.getMethodNames();
-					if (!tempProdFilePaths.equals(null))
-						if (!tempTestFilePaths.equals(null))
-							for (int i = 0; i < tempSmellNames.length; i++) {
-								TableItem item = new TableItem(table, SWT.NONE);
-								item.setText(new String[] { tempSmellNames[i], tempProdFilePaths[i],
-										tempTestFilePaths[i], tempMethodNames[i] });
-							}
-				} catch (NullPointerException e) {
-					Shell activeShell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
-					String errorStr = "Recheck production and test file names. "
-							+ "\nPlease restart your workspace after the file names have been corrected. "
-							+ "\nBelow are the test file/production file mappings that triggered the exception: \n\n";
-					if (detection.getProdFilePath() == null) {
-						errorStr += "Production File: null\n";
-					} else {
-						errorStr += "Production File: " + detection.getProdFilePath() + "\n";
-					}
+		// Suppress redraws while rows are added. Without this SWT lays out and
+		// repaints the table after every single TableItem, which makes the UI
+		// freeze for seconds on large workspaces.
+		table.setRedraw(false);
+		try {
+			if (detections != null) {
+				for (TSmellDetection detection : detections) {
+					try {
+						String[] tempSmellNames = detection.getSmellNames();
+						String[] tempProdFilePaths = (String[]) detection.getProdFilePath();
+						String[] tempTestFilePaths = (String[]) detection.getTestFilePath();
+						String[] tempMethodNames = detection.getMethodNames();
+						if (!tempProdFilePaths.equals(null))
+							if (!tempTestFilePaths.equals(null))
+								for (int i = 0; i < tempSmellNames.length; i++) {
+									TableItem item = new TableItem(table, SWT.NONE);
+									item.setText(new String[] { tempSmellNames[i], tempProdFilePaths[i],
+											tempTestFilePaths[i], tempMethodNames[i] });
+								}
+					} catch (NullPointerException e) {
+						Shell activeShell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
+						String errorStr = "Recheck production and test file names. "
+								+ "\nPlease restart your workspace after the file names have been corrected. "
+								+ "\nBelow are the test file/production file mappings that triggered the exception: \n\n";
+						if (detection.getProdFilePath() == null) {
+							errorStr += "Production File: null\n";
+						} else {
+							errorStr += "Production File: " + detection.getProdFilePath() + "\n";
+						}
 
-					if (detection.getTestFilePath() == null) {
-						errorStr += "Test File: null\n";
-					} else {
-						errorStr += "Test File: " + detection.getTestFilePath() + " \n\n";
-					}
+						if (detection.getTestFilePath() == null) {
+							errorStr += "Test File: null\n";
+						} else {
+							errorStr += "Test File: " + detection.getTestFilePath() + " \n\n";
+						}
 
-					TSmellDialog dialog = new TSmellDialog(activeShell, "Failed to load files", errorStr);
-					dialog.open();
+						TSmellDialog dialog = new TSmellDialog(activeShell, "Failed to load files", errorStr);
+						dialog.open();
+					}
 				}
 			}
+		} finally {
+			table.setRedraw(true);
 		}
 
 		table.addMouseListener(new MouseAdapter() {

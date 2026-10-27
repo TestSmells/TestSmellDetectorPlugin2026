@@ -1,0 +1,80 @@
+name: Eclipse CI
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eclipse-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The shared regression corpus lives in the VS Code repository. Pin the ref so
+  # a corpus change cannot silently alter this repository's results; bump it
+  # deliberately when adopting new cases.
+  CORPUS_REPOSITORY: TestSmells/VSCode-Plugin
+  CORPUS_REF: 117c2f1f585aeb97c3940ede420ad64afe9c58ae
+
+jobs:
+  engine:
+    name: Compile engine and compare regression corpus
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out this repository
+        uses: actions/checkout@v4
+
+      - name: Check out the shared regression corpus
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CORPUS_REPOSITORY }}
+          ref: ${{ env.CORPUS_REF }}
+          path: corpus-repo
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # The SRS constrains this project to leave the tsDetect engine unchanged.
+      # This step enforces that mechanically rather than by review alone.
+      - name: Verify engine sources are unmodified
+        run: |
+          sha256sum --check --strict tools/corpus/engine-checksums.txt
+          echo "Engine sources match the recorded checksums."
+
+      - name: Compile engine and corpus runner
+        run: |
+          mkdir -p build/corpus-classes
+          javac -nowarn -d build/corpus-classes \
+            -cp "lib/javaparser-core-3.2.4.jar:lib/commons-lang3-3.18.0.jar" \
+            $(find src/main/java -name '*.java' -not -path '*/plugin/*')
+          javac -nowarn -d build/corpus-classes \
+            -cp "lib/javaparser-core-3.2.4.jar:lib/commons-lang3-3.18.0.jar:build/corpus-classes" \
+            tools/corpus/CorpusRunner.java
+
+      - name: Compare against the shared regression corpus
+        run: |
+          python3 tools/corpus/run-corpus.py \
+            --corpus corpus-repo/regression-corpus \
+            --classes build/corpus-classes \
+            --lib lib
+
+  # The OSGi bundle is built by Eclipse PDE from the workspace. There is no
+  # headless build: pom.xml is the standalone CLI's POM, inherited at import, and
+  # contains no Tycho configuration. Packaging the plugin and the p2 update site
+  # therefore remains a manual Export step, recorded in README.md.
+  #
+  # Adding a Tycho build is tracked separately. It would require a target
+  # platform definition and a parent POM, and is a larger change than the
+  # modernization scope allows.

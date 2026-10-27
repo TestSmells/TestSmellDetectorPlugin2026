@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "comment": [
+    "Cases where the engine embedded in this repository is known to disagree with",
+    "expected-results.json in the VS Code repository, which was generated from a",
+    "newer build of tsDetect.",
+    "",
+    "Every entry must state the Eclipse engine's actual normalized smell list and",
+    "the reason for the difference. The corpus runner fails if a case diverges",
+    "without an entry here, and also fails if an entry no longer diverges, so this",
+    "file cannot drift away from reality.",
+    "",
+    "Full analysis: documentation/cross-ide-parity.md"
+  ],
+  "notComparedFields": {
+    "testMethods": "The engine in this repository does not report a test-method count. The newer engine emits a NumberOfMethods column; this one has no equivalent, so the field is recorded in the manifest but not compared on the Eclipse side."
+  },
+  "divergences": [
+    {
+      "caseId": "05-junit5-unknown-test",
+      "eclipseSmells": ["Eager Test", "Unknown Test"],
+      "reason": "Magic Number Test. The test contains no assertion at all. This engine raises the smell only when an assertion argument is a numeric literal, so it reports nothing; the newer engine reports the smell regardless."
+    },
+    {
+      "caseId": "06-junit5-lazy-test",
+      "eclipseSmells": ["Lazy Test"],
+      "reason": "Magic Number Test. Both assertions compare string literals. This engine counts only numeric literals as magic numbers."
+    },
+    {
+      "caseId": "07-conventional-test-name",
+      "eclipseSmells": [],
+      "reason": "Magic Number Test. The single assertion compares string literals. This engine counts only numeric literals as magic numbers."
+    },
+    {
+      "caseId": "08-alternative-it-name",
+      "eclipseSmells": [],
+      "reason": "Magic Number Test. assertTrue is called with a boolean expression and a string argument, with no numeric literal present."
+    },
+    {
+      "caseId": "10-special-path",
+      "eclipseSmells": [],
+      "reason": "Magic Number Test. The single assertion compares string literals. The path containing spaces is handled correctly; the difference is the smell definition, not the path."
+    }
+  ]
+}
